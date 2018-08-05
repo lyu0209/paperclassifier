@@ -15,14 +15,16 @@ import javax.swing.*;
  */
 public class MainWindow extends JFrame{
 
-    JPanel panel   =new JPanel();
-    JLabel jl =new JLabel("请选择待处理的事项");
+    JPanel panel = new JPanel();
+    JLabel jl = new JLabel("请选择待处理的事项");
     JButton jb1 = new JButton("SCI单位筛选");
+    JButton jb2 = new JButton("EI单位筛选");
     
     public MainWindow() {
         panel.setLayout(new FlowLayout(FlowLayout.LEFT));//布局
 	panel.add(jl);
         panel.add(jb1);
+        panel.add(jb2);
         
         this.add(panel);
         

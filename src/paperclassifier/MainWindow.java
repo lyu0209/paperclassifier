@@ -52,7 +52,8 @@ public class MainWindow extends JFrame{
                 default:
                     //...;
                     break;
-            }            
+            } 
+            dispose();      // 关闭当前窗口
         }
     }
     

@@ -1,7 +1,9 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * 这个类是用来处理SCI论文的
+ * 对选中的SCI论文清单进行加工，从中筛选出属于CSE的论文;
+ * 比较清单每条记录的所有作者地址项，看看是否是否属于CSE，并在记录的第一项标注结果 
+ * 可能的结果如下：
+ * 非控制论文；第一单位；第n单位
  */
 package paperclassifier;
 

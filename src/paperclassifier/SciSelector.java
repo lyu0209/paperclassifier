@@ -19,7 +19,7 @@ public class SciSelector extends JFrame{
     // 加载待处理的文件
     JPanel panel = new JPanel();
     JLabel jl = new JLabel("这个窗口用来筛选浙江大学控制学院的SCI论文");
-    JButton jb1 = new JButton("SCI清单");
+    JButton jb1 = new JButton("待处理的SCI清单");
     JTextField jt1 = new JTextField("",20);
     JButton jb2 = new JButton("开始");
     JTextField jt2 = new JTextField("",20);
@@ -63,10 +63,5 @@ public class SciSelector extends JFrame{
             ExcelProcessor ep = new ExcelProcessor();
             ep.sciProcessing(s);
 	}    
-    }
-
-    public static void main(String args[])
-    {
-        new SciSelector();
     }
 }

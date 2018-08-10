@@ -16,13 +16,14 @@ import javax.swing.*;
  */
 
 public class SciSelector extends JFrame{
-    // 加载待处理的文件
+    // 定义窗口上的组建
     JPanel panel = new JPanel();
     JLabel jl = new JLabel("这个窗口用来筛选浙江大学控制学院的SCI论文");
     JButton jb1 = new JButton("待处理的SCI清单");
     JTextField jt1 = new JTextField("",20);
-    JButton jb2 = new JButton("开始");
+    JButton jb2 = new JButton("选择地址列表文件");
     JTextField jt2 = new JTextField("",20);
+    JButton jb3 = new JButton("开始");
 	
     public SciSelector(){
 		
@@ -33,11 +34,13 @@ public class SciSelector extends JFrame{
 	panel.add(jt1);
 	panel.add(jb2);
 	panel.add(jt2);
+        panel.add(jb3);
 		
 	this.add(panel);
 		                
-	jb1.addActionListener(new ChooseFile());
-        jb2.addActionListener(new AddressSelect());
+	jb1.addActionListener(new ChooseFile(jt1));
+        jb2.addActionListener(new ChooseFile(jt2));
+        jb3.addActionListener(new AddressSelect());
         
         this.setSize(320, 300);
         this.setLocation(150,75);
@@ -45,6 +48,11 @@ public class SciSelector extends JFrame{
     }
     
     public class ChooseFile implements ActionListener{
+        private JTextField jt;
+        
+        public ChooseFile(JTextField jtext){
+            jt = jtext;
+        }
        	@Override
        	public void actionPerformed(ActionEvent e){
             JFileChooser jf = new JFileChooser();  
@@ -52,16 +60,17 @@ public class SciSelector extends JFrame{
             jf.showDialog(new JLabel(), "选择");  
             File f =  jf.getSelectedFile();//使用文件类获取选择器选择的文件 
             String s = f.getAbsolutePath();//返回路径名  
-            jt1.setText(s);
+            jt.setText(s);
         }
     }
     
     public class AddressSelect implements ActionListener{
         @Override
   	public void actionPerformed(ActionEvent e){
-            String s = jt1.getText();
+            String sciFile = jt1.getText();
+            String addressFile = jt2.getText();
             ExcelProcessor ep = new ExcelProcessor();
-            ep.sciProcessing(s);
+            ep.sciProcessing(sciFile,addressFile);
 	}    
     }
 }

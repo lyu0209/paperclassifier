@@ -8,8 +8,8 @@
 package paperclassifier;
 
 import java.io.*;
-import org.apache.poi.hssf.usermodel.HSSFSheet;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.hssf.usermodel.*;
+
 
 /**
  *
@@ -17,32 +17,50 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
  */
 class ExcelProcessor {
 
-    void sciProcessing(String s) {
-	// 打开excel文件
-	String fileReference = "D:/projects/paperselector/scireference.xls";
+    void sciProcessing(String s1, String s2) {
+	// s1是待处理的SCI论文清单
+        // s2是用来筛选的地址清单
+	String fileSCI = s1;
+        String fileAddress = s2;
 		
 	try {
-	// 打开待处理的原始excel文件，加载指定的sheet
-            HSSFWorkbook wbSCI = new HSSFWorkbook(new FileInputStream(s));
+	// 打开待处理的SCI文件(excel)，加载指定的sheet
+        // 注意，是xls类型的文件
+        
+        // 加载SCI清单文件的Sheet1
+            HSSFWorkbook wbSCI = new HSSFWorkbook(new FileInputStream(fileSCI));
             HSSFSheet shSCI = wbSCI.getSheet("Sheet1");
-					
-	// 读取待处理文件的行数
-            int phyRowNumSCI = shSCI.getPhysicalNumberOfRows();
+	
+        // 加载Address清单文件
+            HSSFWorkbook wbAddress = new HSSFWorkbook(new FileInputStream(fileAddress));
+            HSSFSheet shUsefulAddress = wbAddress.getSheet("useful");
+            HSSFSheet shUselessAddress = wbAddress.getSheet("useless");
+        
+	// 读取待处理SCI清单文件的条目，找到"C1"项
+        
+            //获得SCI清单第一行的总列数
+            int coloumNum = shSCI.getRow(0).getPhysicalNumberOfCells();
+            int coloumC1;         // C1所在的列
+    
+            // 逐条读取第一行（0）的每一项，找到"C1"项所在的列        
+            for(int i=0;i<coloumNum;i++){
+                switch(shSCI.getRow(0).getCell(i).getCellType()){
+                    case HSSFCell.CELL_TYPE_STRING: // 字符串
+                        String item = shSCI.getRow(0).getCell(i).getStringCellValue();
+                        if(item.equals("C1")){
+                            coloumC1 = i;
+                            break;
+                        }
+                        break;
+                    default:
+                        break;
+            }
+        }
+        
 			
-	// 找到待处理文件中作者地址所在的列
-	// 读取待处理文件的列数
-            int coloumNumSCI=shSCI.getRow(0).getPhysicalNumberOfCells();
-            int coloumC1 = 0;
-            for(int i=0; i<coloumNumSCI; i++) {
-		String strSCI = shSCI.getRow(0).getCell(i).getStringCellValue();
-		if(strSCI.equalsIgnoreCase("C1")) {
-			coloumC1 = i;
-			break;
-			} 			
-		}
 			
 	// 打开对应参考的excel文件，加载指定的sheet
-            HSSFWorkbook wbRef = new HSSFWorkbook(new FileInputStream(fileReference));
+            HSSFWorkbook wbRef = new HSSFWorkbook(new FileInputStream(fileSCI));
             HSSFSheet shRef = wbRef.getSheet("address");
 
 	// 读取参考地址(有用的地址)的行数

@@ -8,6 +8,7 @@
 package paperclassifier;
 
 import java.io.*;
+import java.util.*;
 import org.apache.poi.hssf.usermodel.*;
 
 
@@ -33,8 +34,29 @@ class ExcelProcessor {
 	
         // 加载Address清单文件
             HSSFWorkbook wbAddress = new HSSFWorkbook(new FileInputStream(fileAddress));
-            HSSFSheet shUsefulAddress = wbAddress.getSheet("useful");
+            HSSFSheet shUsefulAddress = wbAddress.getSheet("useful");            
             HSSFSheet shUselessAddress = wbAddress.getSheet("useless");
+            
+            // 读出有用地址清单（useful）中的行数
+            int phyRowNum = shUsefulAddress.getPhysicalNumberOfRows();
+            // 将useful地址存放到一个ArrayList中
+            List<String> usefulAddress = new ArrayList<>();
+            // 逐个读取每行的地址（都在第2列），并加入usefulAddress中
+            for(int i=1;i<phyRowNum;i++){
+                String address = shUsefulAddress.getRow(i).getCell(1).getStringCellValue();
+                usefulAddress.add(address);
+            }
+            
+            // 读出无用的浙大地址清单（useless）中的行数
+            phyRowNum = shUselessAddress.getPhysicalNumberOfRows();
+            // 将useless地址存放到一个ArrayList中
+            List<String> uselessAddress = new ArrayList<>();
+            // 逐个读取每行的地址（都在第2列），并加入uselessAddress中
+            for(int i=1;i<phyRowNum;i++){
+                String address = shUselessAddress.getRow(i).getCell(1).getStringCellValue();
+                uselessAddress.add(address);
+            }
+            
         
 	// 读取待处理SCI清单文件的条目，找到"C1"项
         
@@ -64,7 +86,7 @@ class ExcelProcessor {
             HSSFSheet shRef = wbRef.getSheet("address");
 
 	// 读取参考地址(有用的地址)的行数
-            int phyRowNumRef = shRef.getPhysicalNumberOfRows();
+            //int phyRowNumRef = shRef.getPhysicalNumberOfRows();
 		
 	} catch (FileNotFoundException e) {
 	// TODO Auto-generated catch block

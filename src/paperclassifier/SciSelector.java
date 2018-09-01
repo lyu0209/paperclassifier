@@ -19,6 +19,7 @@ public class SciSelector extends JFrame{
     // 定义窗口上的组建
     JPanel panel = new JPanel();
     JLabel jl = new JLabel("这个窗口用来筛选浙江大学控制学院的SCI论文");
+    JLabel j2 = new JLabel("待处理的SCI论文清单最前两列必须是用来标注论文的归属以及通讯单位归属的");
     JButton jb1 = new JButton("待处理的SCI清单");
     JTextField jt1 = new JTextField("",20);
     JButton jb2 = new JButton("选择地址列表文件");
@@ -30,6 +31,7 @@ public class SciSelector extends JFrame{
 	panel.setLayout(new FlowLayout(FlowLayout.LEFT));//布局
         
 	panel.add(jl);
+        panel.add(j2);
 	panel.add(jb1);
 	panel.add(jt1);
 	panel.add(jb2);

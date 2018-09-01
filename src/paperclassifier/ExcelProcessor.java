@@ -9,6 +9,7 @@ package paperclassifier;
 
 import java.io.*;
 import java.util.*;
+import javax.swing.JOptionPane;
 import org.apache.poi.hssf.usermodel.*;
 
 
@@ -54,16 +55,15 @@ class ExcelProcessor {
                 String address = shUselessAddress.getRow(i).getCell(1).getStringCellValue();
                 uselessAddress.add(address);
             }
-        }catch (FileNotFoundException e) {
-	// TODO Auto-generated catch block
-            e.printStackTrace();
-	} catch (IOException e) {
+        }catch (Exception e) {
 	// TODO Auto-generated catch block
             e.printStackTrace();
 	}
         
         /*
-        
+        处理SCI论文清单，每行是一条SCI论文记录
+        注意：待处理的SCI论文清单最前两列必须是用来标注论文的归属以及通讯单位归属的
+        逐行搜索比较所有作者地址（C1）和通讯作者（RP），并记录比较的结果        
         */
 	try {
 	// 打开待处理的SCI文件(excel)，加载指定的sheet
@@ -73,11 +73,11 @@ class ExcelProcessor {
             HSSFWorkbook wbSCI = new HSSFWorkbook(new FileInputStream(fileSCI));
             HSSFSheet shSCI = wbSCI.getSheet("Sheet1");
        
-	// 读取待处理SCI清单文件的条目，找到"C1"项        
-            //获得SCI清单第一行的总列数
-            int coloumNum = shSCI.getRow(0).getPhysicalNumberOfCells();
-            int coloumC1;         // C1所在的列    
-            // 逐条读取第一行（0）的每一项，找到"C1"项所在的列        
+	// 读取待处理SCI清单文件的条目，找到"C1"项和"RP"项        
+            int coloumNum = shSCI.getRow(0).getPhysicalNumberOfCells();         //获得SCI清单第一行的总列数
+            int coloumC1 = 0;         // C1所在的列   
+            int coloumRP = 0;           // RP所在的列
+            // 逐条读取第一行（0）的每一项，找到"C1"和"RP"项所在的列        
             for(int i=0;i<coloumNum;i++){
                 switch(shSCI.getRow(0).getCell(i).getCellType()){
                     case HSSFCell.CELL_TYPE_STRING: // 字符串
@@ -86,12 +86,15 @@ class ExcelProcessor {
                             coloumC1 = i;
                             break;
                         }
+                        if(item.equals("RP")){
+                            coloumRP = i;
+                            break;                        
+                        }
                         break;
                     default:
                         break;
-            }
-        }
-        			
+                }
+            }        			
 			
 	/*
         逐行读取C1列的地址，然后将地址进行分解。
@@ -100,11 +103,71 @@ class ExcelProcessor {
         如果都是无用的地址，则标记为非控制，然后开始下一行地址的判断
         如果无法判断是有用还是无用地址，则弹出对话框进行地址判断，并把判断的结果添加到地址列表中
         */
-            HSSFWorkbook wbRef = new HSSFWorkbook(new FileInputStream(fileSCI));
-            HSSFSheet shRef = wbRef.getSheet("address");
-
-	// 读取参考地址(有用的地址)的行数
-            //int phyRowNumRef = shRef.getPhysicalNumberOfRows();
+	
+        addressProcessing addressOperator = new addressProcessing();            // 定义一个地址操作器
+        int phyRowNum = shSCI.getPhysicalNumberOfRows();                        // 读取SCI清单表格的行数
+        for(int i=1;i<phyRowNum;i++){
+            // 读出第i行中的C1项（C1项在columnC1）
+            String allAddress = shSCI.getRow(i).getCell(coloumC1).getStringCellValue();
+            // 将alladdress分解成数个address
+            List<String> allAddressList = new ArrayList<>();
+            allAddressList = addressOperator.divideSciAll(allAddress);
+            // 逐一判断地址情况，并返回判断结果
+            
+            // 采用一个整数result返回对比结果，可能的返回值包括
+            // 1 --- 是控制论文；-1 --- 非控制论文； 0 --- 无法判断
+             
+            // result[0]中保存地址状态，包括：非控制论文；第一单位；第n单位
+            // result[1]中保存是否添加地址的信息，包括：AddUsefulAddress（添加有效地址）；AddUselessAddress（添加无效地址）；NotAdd（都不添加）
+            for (int j = 0; j < allAddressList.size(); j++) {
+                int result = addressOperator.judgeState(allAddressList.get(j),usefulAddress,uselessAddress);
+                // 根据result的结果做进一步的判断和记录
+                // 如果是控制的论文(result is 1)，则在i行的第一列中写入“第j+1单位”
+                if(result == 1){
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("第");
+                    sb.append(String.valueOf(j+1));
+                    sb.append("单位");
+                    String paperOrganization = sb.toString();               // 记录文章为第j+1单位
+                    shSCI.getRow(i).getCell(0).setCellValue(paperOrganization);     // 写入第1行第1列单元中
+                    break;
+                }
+                // 如果不是控制论文，则根据是否是最后一个单位来进行判断                 
+                else if(result == -1){
+                    // 如果不是最后一个单位，则没有动作；如果是最后一个单位，则在i行的第一列中写入“非控制论文”
+                    if (j == (allAddressList.size()-1)){                    // 是最后一个单位
+                        shSCI.getRow(i).getCell(0).setCellValue("非控制论文");     // 写入第1行第1列单元中
+                    }
+                }
+                //如果无法判断，弹出人工识别对话框
+                else{
+                    String options[]={"是控制","不是控制"};
+                    int value = JOptionPane.showOptionDialog(null, allAddressList.get(j),"人工识别作者单位", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null,options, "是控制");
+                    // 是控制学院，将地址加入地址清单中，并在i行的第一列中写入“第j+1单位”
+                    if (value == 0) {
+                        usefulAddress.add(allAddressList.get(j));               // 在useful地址列表中增加地址
+                        // 在i行的第一列中写入“第j+1单位”
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("第");
+                        sb.append(String.valueOf(j+1));
+                        sb.append("单位");
+                        String paperOrganization = sb.toString();               // 记录文章为第j+1单位
+                        shSCI.getRow(i).getCell(0).setCellValue(paperOrganization);     // 写入第1行第1列单元中
+                        break;
+                    }
+                    // 不是控制学院，将地址加入地址清单中，并根据是否是最后一个单位来进行判断 
+                    if(value == 1){
+                        uselessAddress.add(allAddressList.get(j));               // 在useless地址列表中增加地址
+                        // 如果不是最后一个单位，则没有动作；如果是最后一个单位，则在i行的第一列中写入“非控制论文”
+                        if (j == (allAddressList.size()-1)){                    // 是最后一个单位
+                            shSCI.getRow(i).getCell(0).setCellValue("非控制论文");     // 写入第1行第1列单元中
+                        }
+                    }
+                }
+            }
+        }
+        
+            
 		
 	} catch (FileNotFoundException e) {
 	// TODO Auto-generated catch block

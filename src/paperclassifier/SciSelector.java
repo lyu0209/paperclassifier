@@ -47,6 +47,8 @@ public class SciSelector extends JFrame{
         this.setSize(320, 300);
         this.setLocation(150,75);
         this.setVisible(true);
+        // 实现按掉右上角的×后整个程序自动退出
+        this.setDefaultCloseOperation(EXIT_ON_CLOSE);
     }
     
     public class ChooseFile implements ActionListener{
@@ -73,6 +75,7 @@ public class SciSelector extends JFrame{
             String addressFile = jt2.getText();
             ExcelProcessor ep = new ExcelProcessor();
             ep.sciProcessing(sciFile,addressFile);
+            
 	}    
     }
 }

@@ -1,9 +1,10 @@
-/*
+/**
  * 这个类是用来处理SCI论文的
- * 对选中的SCI论文清单进行加工，从中筛选出属于CSE的论文;
- * 比较清单每条记录的所有作者地址项，看看是否是否属于CSE，并在记录的第一项标注结果 
+ * 逐行读出SCI论文的作者单位，分割后逐项进行判断是否属于控制学院（CSE），以及第几单位，并记录;
+ * 逐行读出SCI论文的通讯地址，分割后逐项判断是否属于控制学院（CSE），并记录。
  * 可能的结果如下：
  * 非控制论文；第一单位；第n单位
+ * 通讯单位（Y）
  */
 package paperclassifier;
 
@@ -14,24 +15,26 @@ import org.apache.poi.hssf.usermodel.*;
 
 
 /**
- *
- * @author kyk
+ * @version v1.0
+ * @author 于玲
  */
-class ExcelProcessor {
+public class ExcelProcessor {
 
     void sciProcessing(String fileName1, String fileName2) {
 	// fileName1是待处理的SCI论文清单
         // fileName2是用来筛选的地址清单
 	String fileSCI = fileName1;
         String fileAddress = fileName2;
-        // 定义有用地址列表和无用地址列表
+        // 定义有用地址列表、无用地址列表和不能确定地址列表
         List<String> usefulAddress = new ArrayList<>();
         List<String> uselessAddress = new ArrayList<>();
+        List<String> undeterminedAddress = new ArrayList<>();
 		
         /*
-        首先打开地址清单文件，将有用的地址（useful）和没用的地址（useless）分别读入到两个列表中
+        首先打开地址清单文件，将有用的地址（useful）、没用的地址（useless）和不能确定的地址（undetermined）分别读入到列表中
         usefulAddress列表中保存有用的地址
         uselessAddress列表中保存无用的地址
+        undeterminedAddress列表中保存不能确定的地址
         关闭地址清单文件
         */
         try {
@@ -39,6 +42,7 @@ class ExcelProcessor {
             HSSFWorkbook wbAddress = new HSSFWorkbook(new FileInputStream(fileAddress));
             HSSFSheet shUsefulAddress = wbAddress.getSheet("useful");            
             HSSFSheet shUselessAddress = wbAddress.getSheet("useless");
+            HSSFSheet shUndeterminedAddress = wbAddress.getSheet("undetermined");
             
             // 将useful地址存放到usefulAddress列表中
             int phyRowNum = shUsefulAddress.getPhysicalNumberOfRows();          // 读出有用地址清单（useful）中的行数
@@ -55,6 +59,14 @@ class ExcelProcessor {
                 String address = shUselessAddress.getRow(i).getCell(1).getStringCellValue();
                 uselessAddress.add(address);
             }
+            
+            // 将undetermined地址存放到undeterminedAddress列表中
+            phyRowNum = shUndeterminedAddress.getPhysicalNumberOfRows();             // 读出不能确定的地址清单（undetermined）中的行数
+            // 逐个读取每行的地址（都在第2列），并加入undeterminedAddress中
+            for(int i=1;i<phyRowNum;i++){
+                String address = shUndeterminedAddress.getRow(i).getCell(1).getStringCellValue();
+                undeterminedAddress.add(address);
+            }            
         }catch (Exception e) {
 	// TODO Auto-generated catch block
             e.printStackTrace();
@@ -104,145 +116,148 @@ class ExcelProcessor {
         如果无法判断是有用还是无用地址，则弹出对话框进行地址判断，并把判断的结果添加到地址列表中
         */
 	
-        addressProcessing addressOperator = new addressProcessing();            // 定义一个地址操作器
-        int phyRowNum = shSCI.getPhysicalNumberOfRows();                        // 读取SCI清单表格的行数
-        for(int i=1;i<phyRowNum;i++){
-            System.out.println("现在开始判断第" + i + "行！");
+            addressProcessing addressOperator = new addressProcessing();            // 定义一个地址操作器
+            int phyRowNum = shSCI.getPhysicalNumberOfRows();                        // 读取SCI清单表格的行数
+            for(int i=1;i<phyRowNum;i++){
+                System.out.println("现在开始判断第" + i + "行！");
         // 首先判断论文的归属（即，论文是第几单位）
             // 读出第i行中的C1项（C1项在columnC1）
-            HSSFCell cell = shSCI.getRow(i).getCell(coloumC1);
-            String allAddress = "";
-            if(cell != null)
-                allAddress = shSCI.getRow(i).getCell(coloumC1).getStringCellValue();
+                HSSFCell cell = shSCI.getRow(i).getCell(coloumC1);
+                String allAddress = "";
+                if(cell != null)
+                    allAddress = shSCI.getRow(i).getCell(coloumC1).getStringCellValue();
             // 将alladdress分解成数个address
-            List<String> allAddressList = new ArrayList<>();
-            allAddressList = addressOperator.divideSciAll(allAddress);
+                List<String> allAddressList = new ArrayList<>();
+                allAddressList = addressOperator.divideSciAll(allAddress);
         // 逐一判断地址情况，并返回判断结果            
             // 采用一个整数cFlag返回对比结果，可能的返回值包括
-            // 1 --- 是控制论文；-1 --- 非控制论文； 0 --- 无法判断      
-            int cFlag = 0;                                                      // 标识地址的收录属性
-            for (int j = 0; j < allAddressList.size(); j++) {
-                cFlag = addressOperator.judgeState(allAddressList.get(j),usefulAddress,uselessAddress);
-            // 根据result的结果做进一步的操作
-                //如果result=0，无法判断论文归属，则弹出人工识别对话框
-                if(cFlag == 0) {
+            // 1 --- 是控制论文；-1 --- 非控制论文； 0 --- 无法判断；  2 --- 需手动判断      
+                int cFlag = 2;                                                      // 标识地址的收录属性
+                for (int j = 0; j < allAddressList.size(); j++) {
+                    cFlag = addressOperator.judgeState(allAddressList.get(j),usefulAddress,uselessAddress,undeterminedAddress);
+            // 根据cFlag的结果做进一步的操作
+                //如果cFlag=2，地址不在三张清单中，则弹出人工识别对话框
+                    if(cFlag == 2) {
                     // 使用showOptionDialog方法来弹出人工识别对话框
                     // 设置对话框的参数
-                    String options[]={"是控制","不是控制","无法判断"};
-                    StringBuilder sb1 = new StringBuilder();
-                    sb1.append("第");
-                    sb1.append(String.valueOf(i));
-                    sb1.append("行的单位需要人工识别：");
-                    sb1.append(allAddressList.get(j));
-                    String reminder = sb1.toString();
-                    int value = JOptionPane.showOptionDialog(null, reminder,"人工识别作者单位", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null,options, "是控制");
+                        String options[]={"是控制","不是控制","无法判断"};
+                        StringBuilder sb1 = new StringBuilder();
+                        sb1.append("第");
+                        sb1.append(String.valueOf(i));
+                        sb1.append("行的单位需要人工识别：");
+                        sb1.append(allAddressList.get(j));
+                        String reminder = sb1.toString();
+                        int value = JOptionPane.showOptionDialog(null, reminder,"人工识别作者单位", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null,options, "是控制");
                     // 根据人工识别的结果修改useful and useless list
                     // if value==1, then the address does not belong to cse
-                    if(value == 1){
-                        uselessAddress.add(allAddressList.get(j).trim());       // 在useless地址列表中增加地址
-                        cFlag = -1;                                            // set the result to be -1
+                        if(value == 1){
+                            uselessAddress.add(allAddressList.get(j).trim());       // 在useless地址列表中增加地址
+                            cFlag = -1;                                            // set the cFlag to be -1
+                        }
+                        else if(value == 0) {
+                            usefulAddress.add(allAddressList.get(j).trim());        // add the address into the useful list
+                            cFlag = 1;                                             // set the cFlag to be 1
+                        }
+                        else{
+                            undeterminedAddress.add(allAddressList.get(j).trim());  // add the address into the undetermined list
+                            cFlag = 0;                                              // set the cFlag to be 0
+                        }
                     }
-                    else if(value == 0) {
-                        usefulAddress.add(allAddressList.get(j).trim());        // add the address into the useful list
-                        cFlag = 1;                                             // set the result to be 1
-                    }
-                }
                 // 如果是控制的论文(cFlag is 1)，则在i行的第一列中写入“第j+1单位”
-                if(cFlag == 1){
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("第");
-                    sb.append(String.valueOf(j+1));
-                    sb.append("单位");
-                    String paperOrganization = sb.toString();               // 记录文章为第j+1单位
-                    shSCI.getRow(i).createCell(0).setCellValue(paperOrganization);     // 写入第1行第1列单元中
-                    break;
-                }
+                    if(cFlag == 1){
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("第");
+                        sb.append(String.valueOf(j+1));
+                        sb.append("单位");
+                        String paperOrganization = sb.toString();               // 记录文章为第j+1单位
+                        shSCI.getRow(i).createCell(0).setCellValue(paperOrganization);     // 写入第1行第1列单元中
+                        break;
+                    }
+                    // 如果无法判断(cFlag=0)，则根据是否是最后一个单位来进行判断
+                    else if(cFlag == 0){
+                        shSCI.getRow(i).createCell(0).setCellValue("无法判断");
+                        break;
+                    }
                 // 如果不是控制论文，则根据是否是最后一个单位来进行判断                 
-                else if(cFlag == -1){
+                    else {
                     // 如果不是最后一个单位，则没有动作；如果是最后一个单位，则在i行的第一列中写入“非控制论文”
-                    if (j == (allAddressList.size()-1)){                    // 是最后一个单位
-                        shSCI.getRow(i).createCell(0).setCellValue("非控制论文");     // 写入第i行第1列单元中
-                    }
-                } 
-                // 如果无法判断(cFlag=0)，则根据是否是最后一个单位来进行判断
-                else{
-                    // 如果不是最后一个单位，则没有动作；如果是最后一个单位，则在i行的第一列中写入“无法判断”
-                    if (j == (allAddressList.size()-1)){                    // 是最后一个单位
-                        shSCI.getRow(i).createCell(0).setCellValue("无法判断");     // 写入第i行第1列单元中
-                    }
+                        if (j == (allAddressList.size()-1)){                    // 是最后一个单位
+                            shSCI.getRow(i).createCell(0).setCellValue("非控制论文");     // 写入第i行第1列单元中
+                        }
+                    }          
                 }
-            }
             
         // 其次判断论文的通讯单位
         // 如果是控制论文(cFlag == 1)，则继续判断通讯单位
-        if(cFlag == 1){
+                if(cFlag == 1){
             // 读出第i行中的RP项（RP项在columnRP）
-            cell = shSCI.getRow(i).getCell(coloumRP);
-            String rpAddress = "";
-            if(cell != null)                
-                rpAddress = cell.getStringCellValue();
+                    cell = shSCI.getRow(i).getCell(coloumRP);
+                    String rpAddress = "";
+                    if(cell != null)                
+                        rpAddress = cell.getStringCellValue();
             // 将rpAddress分解成数个address
-            List<String> rpList = new ArrayList<>();
-            rpList = addressOperator.divideRPAddress(rpAddress);
+                    List<String> rpList = new ArrayList<>();
+                    rpList = addressOperator.divideRPAddress(rpAddress);
             
             // 逐一判断地址情况，并返回判断结果                        
-            for (int j = 0; j < rpList.size(); j++) {
+                    for (int j = 0; j < rpList.size(); j++) {
                 // 采用一个整数result返回对比结果，可能的返回值包括
-                // 1 --- 是控制通讯；-1 --- 非控制通讯； 0 --- 无法判断  
-                int result = addressOperator.judgeState(rpList.get(j),usefulAddress,uselessAddress);
+                // 1 --- 是控制通讯；-1 --- 非控制通讯； 0 --- 无法判断； 2 --- 需要人工判断  
+                        int result = addressOperator.judgeState(rpList.get(j),usefulAddress,uselessAddress,undeterminedAddress);
                 // 根据result的结果做进一步的操作
-                //如果result=0，无法判断论文归属，则弹出人工识别对话框
-                if(result == 0) {
+                //如果result=2，无法判断论文归属，则弹出人工识别对话框
+                        if(result == 2) {
                     // 使用showOptionDialog方法来弹出人工识别对话框
                     // 设置对话框的参数
-                    String options[]={"是控制通讯","不是控制通讯","无法判断"};
-                    StringBuilder sb1 = new StringBuilder();
-                    sb1.append("第");
-                    sb1.append(String.valueOf(i));
-                    sb1.append("行的通讯单位需要人工识别：");
-                    sb1.append(rpList.get(j));
-                    String reminder = sb1.toString();
-                    int value = JOptionPane.showOptionDialog(null, reminder,"人工识别通讯作者单位", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null,options, "是控制通讯");
+                            String options[]={"是控制通讯","不是控制通讯","无法判断"};
+                            StringBuilder sb1 = new StringBuilder();
+                            sb1.append("第");
+                            sb1.append(String.valueOf(i));
+                            sb1.append("行的通讯单位需要人工识别：");
+                            sb1.append(rpList.get(j));
+                            String reminder = sb1.toString();
+                            int value = JOptionPane.showOptionDialog(null, reminder,"人工识别通讯作者单位", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null,options, "是控制通讯");
                     // 根据人工识别的结果修改useful and useless list
                     // if value==1, then the address does not belong to cse
-                    if(value == 1){
-                        uselessAddress.add(allAddressList.get(j).trim());       // 在useless地址列表中增加地址
-                        result = -1;                                            // set the result to be -1
-                    }
-                    else {
-                        usefulAddress.add(allAddressList.get(j).trim());        // add the address into the useful list
-                        result = 1;                                             // set the result to be 1
-                    }
-                }
+                            if(value == 1){
+                                uselessAddress.add(allAddressList.get(j).trim());       // 在useless地址列表中增加地址
+                                result = -1;                                            // set the result to be -1
+                            }
+                            else if(value == 0) {
+                                usefulAddress.add(allAddressList.get(j).trim());        // add the address into the useful list
+                                result = 1;                                             // set the result to be 1
+                            }
+                            else{
+                                undeterminedAddress.add(allAddressList.get(j).trim());  // add the address into the undetermined list
+                                result = 0;                                             // set the result to be 0
+                            }
+                        }
                 // 如果是控制的通讯(result is 1)，则在i行的第二列中写入“Y”
-                if(result == 1){
-                    shSCI.getRow(i).createCell(1).setCellValue("Y");     // 写入第1行第2列单元中
-                    break;
-                }
-                // 如果不是控制通讯论文，则根据是否是最后一个单位来进行判断                 
-                else if(result == -1) {
+                        if(result == 1){
+                            shSCI.getRow(i).createCell(1).setCellValue("Y");     // 写入第1行第2列单元中
+                            break;
+                        }
+                // 如果无法判断（result is 0），则在i行的第二列中写入“无法判断”                 
+                        else if(result == 0) {
+                            shSCI.getRow(i).createCell(1).setCellValue("无法判断");     // 写入第i行第2列单元中
+                            break;
+                        }
+                        else{
                     // 如果不是最后一个单位，则没有动作；如果是最后一个单位，则在i行的第一列中写入“N”
-                    if (j == (allAddressList.size()-1)){                    // 是最后一个单位
-                        shSCI.getRow(i).createCell(1).setCellValue("N");     // 写入第i行第2列单元中
+                            if (j == (allAddressList.size()-1)){                    // 是最后一个单位
+                                shSCI.getRow(i).createCell(1).setCellValue("N");     // 写入第i行第2列单元中
+                            }
+                        } 
                     }
                 }
-                else{
-                    // 如果不是最后一个单位，则没有动作；如果是最后一个单位，则在i行的第一列中写入“无法判断”
-                    if (j == (allAddressList.size()-1)){                    // 是最后一个单位
-                        shSCI.getRow(i).createCell(1).setCellValue("无法判断");     // 写入第i行第2列单元中
-
-                }
-            } 
-        }
-        }
-        }
+            }
         
         // 将识别结果写入excel文档中
-        FileOutputStream fileOut = new FileOutputStream(fileSCI); {
-            wbSCI.write(fileOut);
-            fileOut.flush();
-            fileOut.close();
-        }    
+            FileOutputStream fileOut = new FileOutputStream(fileSCI); {
+                wbSCI.write(fileOut);
+                fileOut.flush();
+                fileOut.close();
+            }    
         	
 	} catch (FileNotFoundException e) {
 	// TODO Auto-generated catch block
@@ -257,6 +272,7 @@ class ExcelProcessor {
             HSSFWorkbook wbAddress = new HSSFWorkbook(new FileInputStream(fileAddress));
             HSSFSheet shUsefulAddress = wbAddress.getSheet("useful");            
             HSSFSheet shUselessAddress = wbAddress.getSheet("useless");
+            HSSFSheet shUndeterminedAddress = wbAddress.getSheet("undetermined");
 
             // 将usefulAddress列表中的地址存放到useful sheet中
             int phyRowNum = shUsefulAddress.getPhysicalNumberOfRows();          // 读出有用地址清单（useful）中的行数
@@ -276,6 +292,15 @@ class ExcelProcessor {
                 shUselessAddress.getRow(i+1).createCell(1).setCellValue(address);                 
             }
             
+            // 将undeterminedAddress列表中的地址存放到undetermined sheet中
+            phyRowNum = shUndeterminedAddress.getPhysicalNumberOfRows();          // 读出有用地址清单（useful）中的行数
+            // 从undeterminedAddress列表中新增的地址开始，逐个读取地址并写入undetermined sheet中（第2列）
+            for(int i=phyRowNum-1;i<undeterminedAddress.size();i++){
+                String address = undeterminedAddress.get(i);
+                shUndeterminedAddress.createRow(i+1).createCell(0).setCellValue(i+1);
+                shUndeterminedAddress.getRow(i+1).createCell(1).setCellValue(address);                 
+            }
+            
             // write into the excell file
             FileOutputStream fileOut = new FileOutputStream(fileAddress); {
             wbAddress.write(fileOut);
@@ -287,7 +312,6 @@ class ExcelProcessor {
             e.printStackTrace();
 	}
         System.out.println("It's over, sucessful!");
-
     }
     
 }

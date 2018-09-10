@@ -1,7 +1,6 @@
 /*
- * This is the main window.
- * Select different function from the main window.
- * 
+ * 这是主窗口，用户在这个窗口选择识别SCI论文或者EI论文
+ * v1.0版没有实现EI论文识别的跳转
  */
 package paperclassifier;
 
@@ -11,7 +10,7 @@ import javax.swing.*;
 
 /**
  * @version 1.0
- * @author Yu Ling
+ * @author 于玲
  */
 public class MainWindow extends JFrame{
 
@@ -33,6 +32,8 @@ public class MainWindow extends JFrame{
         this.setSize(320, 300);
         this.setLocation(150,75);
         this.setVisible(true);
+        // 实现按掉右上角的×后整个程序自动退出
+        this.setDefaultCloseOperation(EXIT_ON_CLOSE);
     }
     
     public class ButtonAction implements ActionListener{
@@ -53,9 +54,6 @@ public class MainWindow extends JFrame{
                     //...;
                     break;
             } 
-            dispose();      // 关闭当前窗口
         }
     }
-    
-    
 }

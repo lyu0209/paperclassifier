@@ -1,7 +1,9 @@
-/*
- * 用来对地址信息进行分解、比较等操作
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * 这个类用来对地址信息进行分解、比较等操作
+ * 包括3个方法
+ * 方法divideSciAll 用来将所有作者单位信息（一个字符串）根据一定的特征进行分解，得到一个地址list
+ * 方法divideRPAddress 用来将通讯作者单位信息（一个字符串）根据一定的特征进行分解，得到一个地址list
+ * 方法judgeState 用来判断单个地址属于哪一个地址清单，useful or useless or undetermined
  */
 package paperclassifier;
 
@@ -10,10 +12,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- *
+ * @version v1.0
  * @author 于玲
  */
-class addressProcessing {
+public class addressProcessing {
 
     // DivideSciAll方法将SCI清单中所有作者地址分解成单个地址列表
     public static List<String> divideSciAll(String s) {
@@ -33,18 +35,18 @@ class addressProcessing {
         return allAddressList;
     }
 
-    public int judgeState(String s, List<String> usefulAddress, List<String> uselessAddress) {
+    public int judgeState(String s, List<String> usefulAddress, List<String> uselessAddress, List<String> undeterminedAddress) {
         // 首先除去地址前后的空格
         String address = s.trim();
         // 初始化返回状态
-        int value = 0;
+        int value = 2;
         
         // 判断是否是浙江大学的论文        
         String zju = "Zhejiang Univ,";
         //int index = address.indexOf(zju);
         // 如果是浙江大学的论文，则判断是否控制学院论文
         //if(index != -1){
-        if(address.contains(zju)){
+        if(address.contains(zju) && address.toLowerCase().contains("control")){
             // 查看是否在useful地址清单中。如果在，则是控制学院论文，返回1
             if(usefulAddress.contains(address)){
                 value = 1;            
@@ -53,16 +55,20 @@ class addressProcessing {
             else if (uselessAddress.contains(address)){
                 value = -1;
             }
-            // 两张清单中都没有
+            // 查看是否在undetermined地址清单中。如果在，则是无法判断的论文，返回0
+            else if(undeterminedAddress.contains(address)){
+                value = 0;
+            }
+            // 三张清单中都没有
             else{
-                // 如果地址中包含control，则返回0（无法判断）
-                if(address.toLowerCase().contains("control"))
-                    value = 0;
-                else
-                    value = -1;
+                // 如果地址中包含control，则返回2，需人工识别单位
+                //if(address.toLowerCase().contains("control"))
+                    value = 2;
+                //else
+                //    value = -1;
             }
         }
-        // 如果不精确包含字符串“Zhejiang Univ,”，则不是浙江大学的单位，直接返回状态为-1
+        // 如果不精确包含字符串“Zhejiang Univ,”和“control”，则不是浙江大学的单位，直接返回状态为-1
         else{
             value = -1;
         }

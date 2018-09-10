@@ -1,7 +1,12 @@
-/*
- * Pick the papers of CSE from all ZJU papers;
- * Identify whether the CSE is the first unit;
- * Identify whether the CSE is the correspondence unit.
+/**
+ * 这个类用来选择待识别的SCI文件，是xls格式的excel文件；
+ * 还可以选择用来判断地址的地址清单文件，建议采用项目自带的Address.xls文件;
+ * 如果采用其他的地址清单文件，需满足一下条件：
+ * <ul>
+ * <li> 文件必须是xls格式的excel文件
+ * <li> 文件中包括三个sheets，分别命名为useful, useless, undetermined
+ * <li> 每张表包含2列，第一列是序号，第二列是地址列
+ * </ul>
  */
 package paperclassifier;
 
@@ -48,7 +53,7 @@ public class SciSelector extends JFrame{
         this.setLocation(150,75);
         this.setVisible(true);
         // 实现按掉右上角的×后整个程序自动退出
-        this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        // this.setDefaultCloseOperation(EXIT_ON_CLOSE);
     }
     
     public class ChooseFile implements ActionListener{
@@ -75,7 +80,7 @@ public class SciSelector extends JFrame{
             String addressFile = jt2.getText();
             ExcelProcessor ep = new ExcelProcessor();
             ep.sciProcessing(sciFile,addressFile);
-            
+            dispose();      // 关闭当前窗口
 	}    
     }
 }

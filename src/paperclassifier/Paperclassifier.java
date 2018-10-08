@@ -29,6 +29,7 @@ public class Paperclassifier {
     public static void main(String[] args) {
         // Call the main window
         new MainWindow();
+       // new FileSelector();
     }
     
 

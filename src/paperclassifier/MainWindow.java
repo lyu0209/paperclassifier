@@ -50,6 +50,9 @@ public class MainWindow extends JFrame{
                 case "SCI":
                     new SciSelector();
                     break;
+                case "EI":
+                    // new EiSelector();
+                    break;
                 default:
                     //...;
                     break;
